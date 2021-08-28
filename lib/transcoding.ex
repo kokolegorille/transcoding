@@ -19,16 +19,12 @@ defmodule Transcoding do
   # size=84842
   # type=thumbnail
 
-  def test_thumbnail do
-    ## THUMBNAIL TRANSFORM
-
+  def test_thumbnail(file) do
     transformations = [
       {:mini, {:convert, "-resize 160x90^ -gravity center -extent 160x90 -format png"}, :png},
       {:thumb, {:convert, "-resize 256x144^ -gravity center -extent 256x144 -format png"}, :png},
       {:large, {:convert, "-resize 640x360^ -gravity center -extent 640x360 -format png"}, :png}
     ]
-
-    file = "/home/sqrt/DATA_2021/app4am_uploads/thumbnail/a5bb35c5-c145-47db-9db2-dacf25f6abd2/s_1C4D1591CADC57205E88CF17E0B735562AA29A2AA6A546E3AA530EF47972F419_1605717370998_032.jpg"
 
     # TODO: Chech file exists
 
@@ -63,11 +59,7 @@ defmodule Transcoding do
     end)
   end
 
-  def test_medium do
-    file = "/home/sqrt/DATA_2021/app4am_uploads/medium/a5bb35c5-c145-47db-9db2-dacf25f6abd2/Kluski Śląskie @ Jalapeño Bilingüe.mp4"
-
-    # file = "/home/sqrt/DATA_2021/app4am_uploads/medium/a5bb35c5-c145-47db-9db2-dacf25f6abd2/alice-a-pestalozzi.mp4"
-
+  def test_medium(file) do
     # Animated gif
     # Poster
     # Sprite
@@ -180,83 +172,71 @@ defmodule Transcoding do
     end)
   end
 
-  def jw_player_thumbnails do
-    # file = "/home/sqrt/DATA_2021/app4am_uploads/medium/a5bb35c5-c145-47db-9db2-dacf25f6abd2/alice-a-pestalozzi.mp4"
-    file = "/home/sqrt/DATA_2021/app4am_uploads/medium/a5bb35c5-c145-47db-9db2-dacf25f6abd2/Kluski Śląskie @ Jalapeño Bilingüe.mp4"
-    # file = "/home/sqrt/DATA_2021/app4am_uploads/medium/a5bb35c5-c145-47db-9db2-dacf25f6abd2/kflay.mp4"
+  # file = "/home/sqrt/DATA_2021/app4am_uploads/medium/a5bb35c5-c145-47db-9db2-dacf25f6abd2/alice-a-pestalozzi.mp4"
+  # file = "/home/sqrt/DATA_2021/app4am_uploads/medium/a5bb35c5-c145-47db-9db2-dacf25f6abd2/Kluski Śląskie @ Jalapeño Bilingüe.mp4"
+  # file = "/home/sqrt/DATA_2021/app4am_uploads/medium/a5bb35c5-c145-47db-9db2-dacf25f6abd2/kflay.mp4"
+  #
+  # Transcoding.jw_player_thumbnails f, thumb_width: 80
+  #
+  # Options:
+  # * timespan: time between each screenshots in seconds
+  # * thumb_width: max width of the thumbnail
+  # * sprite_width: number of thumbnails per row
+  #
+  # Sample Php code
+  #
+  # shell_exec(sprintf($commands['thumbs'],
+  #   $start + .0001, $params['input'], $params['thumbWidth'],
+  #   $params['timespan'] * $tbr, $params['output'], $name
+  # ));
+  #
+  # Php code
+  #
+  # $vtt = "WEBVTT\n\n";
+  # for ($rx = $ry = $s = $f = 0; $f < $total; $f++) {
+  #     $t1 = sprintf('%02d:%02d:%02d.000', ($s / 3600), ($s / 60 % 60), $s % 60);
+  #     $s += $params['timespan'];
+  #     $t2 = sprintf('%02d:%02d:%02d.000', ($s / 3600), ($s / 60 % 60), $s % 60);
+  #     if (isset($opts['v'])) {
+  #         $vtt .= "{$t1} --> {$t2}\nthumbnails/" . basename($files[$f]);
+  #     } else {
+  #         if ($f && !($f % $thumbsAcross)) {
+  #             $rx = 0;
+  #             ++$ry;
+  #         }
+  #         imagecopymerge($coalesce, imagecreatefromjpeg($files[$f]), $rx * $sizes[0], $ry * $sizes[1], 0, 0, $sizes[0], $sizes[1], 100);
+  #         $vtt .= sprintf("%s --> %s\nthumbnails.jpg#xywh=%d,%d,%d,%d", $t1, $t2, $rx++ * $sizes[0], $ry * $sizes[1],  $sizes[0], $sizes[1]);
+  #     }
+  #     $vtt .= "\n\n";
+  # }
+  #
+  # Sample ffmpeg commands
+  # ffmpeg -ss %0.04f -i %s -y -an -sn -vsync 0 -q:v 5 -threads 1 -vf scale=%d:-1,select="not(mod(n\,%d))" "%s/thumbnails/%s-%%04d.jpg" 2>&1
+  # ffmpeg -y -i alice-a-pestalozzi.mp4 -an -sn -vsync 0 -q:v 5 -threads 1 -vf "scale=120:-1,select='not(mod(n,300))'" thumbnails/f-%04d.jpg
 
+
+  def jw_player_thumbnails(file, opts \\ []) do
+    timespan = Keyword.get(opts, :timespan, 10)
+    thumb_width = Keyword.get(opts, :thumb_width, 120)
+    sprite_width = Keyword.get(opts, :sprite_width, 10)
+
+    # This will be the output dir of the sprite files
     file_dir = Path.dirname(file)
 
-    tmp_key = 10
-    |> :crypto.strong_rand_bytes()
-    |> :base64.encode()
+    name = Path.basename(file, Path.extname(file))
 
-    dest = Path.join([file_dir, "_tmp_#{tmp_key}"])
+    # Generate a random tmp directory
+    # which will be deleted after work
+    dest = Path.join([file_dir, "_tmp_#{:rand.uniform(1_000_000)}"])
 
     unless File.exists?(dest), do: File.mkdir!(dest)
 
-    # This will return an exit code of 1, because no output file is specified
+    %{duration: _duration, start: start, tbr: tbr} = extract_file_info(file)
+    # Logger.info("DURATION => #{duration}")
+    # Logger.info("START => #{start}")
+    # Logger.info("TBR => #{tbr}")
 
-    {:error, details} = process(file, dest, {:ffmpeg, fn input, _output -> ["-i",  input] end})
-
-    #########################################
-    ## DURATION
-    #########################################
-
-    map = Regex.named_captures(~r/Duration: ((?<hours>\d+):(?<minutes>\d+):(?<seconds>\d+))\.\d+, start: (?<start>[^,]*)/is, details)
-
-    duration = String.to_integer(map["hours"]) * 3_600 +
-      String.to_integer(map["minutes"]) * 60 +
-      String.to_integer(map["seconds"])
-
-    Logger.info("DURATION => #{duration}")
-
-    start = map["start"]
-    |> String.to_float()
-    |> Kernel.+(0.0001)
-    |> :erlang.float_to_binary([decimals: 4])
-
-    Logger.info("START => #{start}")
-
-    # %{
-    #   "duration" => "00:02:25",
-    #   "hours" => "00",
-    #   "minutes" => "02",
-    #   "seconds" => "25",
-    #   "start" => "0.000000"
-    # }
-
-    #########################################
-    ## TBR
-    #########################################
-
-    map = Regex.named_captures(~r/\b(?<tbr>\d+(?:\.\d+)?) tbr\b/, details)
-
-    tbr = String.to_integer(map["tbr"])
-
-    Logger.info("TBR => #{tbr}")
-
-    # %{"tbr" => "30"}
-
-    name = Path.basename(file, Path.extname(file))
-    timespan = 10
-    thumb_width = 120
-    sprite_width = 10
-
-    # ffmpeg -ss %0.04f -i %s -y -an -sn -vsync 0 -q:v 5 -threads 1 -vf scale=%d:-1,select="not(mod(n\,%d))" "%s/thumbnails/%s-%%04d.jpg" 2>&1
-
-    # shell_exec(sprintf($commands['thumbs'],
-    #   $start + .0001, $params['input'], $params['thumbWidth'],
-    #   $params['timespan'] * $tbr, $params['output'], $name
-    # ));
-
-    # [
-    #   "-y", "-i", file, "-ss", "#{start}", "-an", "-sn", "-vsync", "0", "-q:v", "5", "-threads", "1",
-    #   "-vf", "scale=#{thumb_width}:-1,select=\"not(mod(n, #{timespan * tbr}))\"", "#{dest}/#{name}-%%04d.jpg"
-    # ]
-
-    # ffmpeg -y -i alice-a-pestalozzi.mp4 -an -sn -vsync 0 -q:v 5 -threads 1 -vf "scale=120:-1,select='not(mod(n,300))'" thumbnails/f-%04d.jpg
-
+    # Generate thumbnails
     fun = fn input, _output ->
       [
         "-y", "-i", input, "-ss", "#{start}", "-an", "-sn", "-vsync", "0", "-q:v", "5", "-threads", "1",
@@ -266,23 +246,24 @@ defmodule Transcoding do
 
     process file, dest, {:ffmpeg, fun}
 
-    # READ DIR
-    # files = Path.wildcard(Path.join(dest, "*.jpg"))
+    # Read tmp_dir and list thumbnails
     [first_sprite | _] = files = dest
     |> Path.join("*.jpg")
     |> Path.wildcard()
     |> Enum.sort()
 
-    Logger.info("FILES: #{inspect files}")
+    # Logger.info("FILES: #{inspect files}")
 
-    # COUNT
+    # Count
     total = Enum.count(files)
-    Logger.info("TOTAL: #{total}")
+    # Logger.info("TOTAL: #{total}")
 
-    # GET IMAGE INFO
-    {_, w, h, _} = first_sprite
-    |> File.read!()
-    |> ExImageInfo.info()
+    # Get Image Info
+    #
+    # w: width of a single thumbnail
+    # h: height of a single thumbnail
+
+    {_, w, h, _} = first_sprite |> File.read!() |> ExImageInfo.info()
 
     Logger.info("Width/Height: #{w} #{h}")
 
@@ -293,48 +274,16 @@ defmodule Transcoding do
 
     Logger.info("WIDTH/HEIGHT: #{width} #{height}")
 
-    # GENERATE SPRITE
-    # Use montage to build sprite
-
-    # montage_dest = Path.dirname(file)
-
+    # Generate Sprite Image with montage instead of php-gd
     sprite_name = "sprite.jpg"
     sprite_image = Path.join([file_dir, sprite_name])
 
-    # montage_args = ["#{dest}/*.jpg", "-tile", "#{thumb_across}x#{rows}", "-geometry", "#{w}x#{h}+0+0", Path.join([montage_dest, sprite_name])]
     montage_args = ["#{dest}/*.jpg", "-tile", "#{thumb_across}x#{rows}", "-geometry", "#{w}x#{h}+0+0", sprite_image]
 
-    case System.cmd("montage", montage_args, stderr_to_stdout: true) do
-      {_, 0} ->
-        :ok
-      {error_message, exit_code} ->
-        Logger.info "EXIT CODE : #{exit_code}"
+    # Expect the command to succeed
+    :ok = exec("montage", montage_args)
 
-        {:error, error_message}
-    end
-
-    # GENERATE VTT
-
-    # $vtt = "WEBVTT\n\n";
-    # for ($rx = $ry = $s = $f = 0; $f < $total; $f++) {
-    #     $t1 = sprintf('%02d:%02d:%02d.000', ($s / 3600), ($s / 60 % 60), $s % 60);
-    #     $s += $params['timespan'];
-    #     $t2 = sprintf('%02d:%02d:%02d.000', ($s / 3600), ($s / 60 % 60), $s % 60);
-    #     if (isset($opts['v'])) {
-    #         $vtt .= "{$t1} --> {$t2}\nthumbnails/" . basename($files[$f]);
-    #     } else {
-    #         if ($f && !($f % $thumbsAcross)) {
-    #             $rx = 0;
-    #             ++$ry;
-    #         }
-    #         imagecopymerge($coalesce, imagecreatefromjpeg($files[$f]), $rx * $sizes[0], $ry * $sizes[1], 0, 0, $sizes[0], $sizes[1], 100);
-    #         $vtt .= sprintf("%s --> %s\nthumbnails.jpg#xywh=%d,%d,%d,%d", $t1, $t2, $rx++ * $sizes[0], $ry * $sizes[1],  $sizes[0], $sizes[1]);
-    #     }
-    #     $vtt .= "\n\n";
-    # }
-
-    # ITERATE OVER RANGE
-
+    # Generate VTT
     initial_acc = %{rx: 0, ry: 0, s: 0, vtt: "WEBVTT\n\n"}
 
     %{vtt: vtt} = Enum.reduce(0..(total - 1), initial_acc, fn f, acc ->
@@ -353,7 +302,6 @@ defmodule Transcoding do
 
     Logger.info("VTT: #{vtt}")
 
-    # File.write!(Path.join([montage_dest, "sprite.vtt"]), vtt)
     sprite_vtt = Path.join([file_dir, "sprite.vtt"])
     File.write!(sprite_vtt, vtt)
 
@@ -362,6 +310,33 @@ defmodule Transcoding do
     File.rm_rf!(dest)
 
     {:ok, %{sprite_image: sprite_image, sprite_vtt: sprite_vtt}}
+  end
+
+  defp extract_file_info(file) do
+    # This will return an exit code of 1, because no output file is specified.
+    # This is an expected error :-)
+    # and the return will contains file information
+
+    {:error, details} = exec("ffmpeg", ["-i",  file])
+
+    regex = ~r/Duration: ((?<hours>\d+):(?<minutes>\d+):(?<seconds>\d+))\.\d+, start: (?<start>[^,]*)/is
+    map = Regex.named_captures(regex, details)
+
+    duration = String.to_integer(map["hours"]) * 3_600 +
+      String.to_integer(map["minutes"]) * 60 +
+      String.to_integer(map["seconds"])
+
+    start = map["start"]
+      |> String.to_float()
+      |> Kernel.+(0.0001)
+      |> :erlang.float_to_binary([decimals: 4])
+
+    regex = ~r/\b(?<tbr>\d+(?:\.\d+)?) tbr\b/
+    map = Regex.named_captures(regex, details)
+
+    tbr = String.to_integer(map["tbr"])
+
+    %{duration: duration, start: start, tbr: tbr}
   end
 
   defp time_to_string(nil), do: nil
@@ -378,35 +353,6 @@ defmodule Transcoding do
     |> Integer.to_string()
     |> String.pad_leading(2, "0")
   end
-
-  # def process(file, dest, {cmd, conversion}) do
-  #   apply(cmd, file, dest, conversion)
-  # end
-
-  # def apply(cmd, file, dest, args) do
-  #   # This allow to pass a function
-  #   # ffmpeg requires something like "-i #{input} #{output}"
-  #   args = if is_function(args),
-  #     do: args.(file, dest),
-  #     else: [file | String.split(args, " ") ++ [dest]]
-
-  #   program = to_string(cmd)
-
-  #   ensure_executable_exists!(program)
-
-  #   args = args_list(args)
-
-  #   Logger.info "ARGS : #{inspect(args)}"
-
-  #   case System.cmd(program, args, stderr_to_stdout: true) do
-  #     {_, 0} ->
-  #       :ok
-  #     {error_message, exit_code} ->
-  #       Logger.info "EXIT CODE : #{exit_code}"
-
-  #       {:error, error_message}
-  #   end
-  # end
 
   def process(file, dest, {cmd, conversion}) do
     # This allow to pass a function
