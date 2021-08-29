@@ -27,7 +27,18 @@ Inspired by waffle and jwplayer-thumbnail-preview-generator (for sprites generat
 
 It persists work in subfolder of the original file, except for sprites, directly in it.
 
-References: 
+## References: 
 
 * [Waffle](https://hexdocs.pm/waffle)
 * [JWPlayer thumbnail preview generator](https://github.com/amnuts/jwplayer-thumbnail-preview-generator)
+
+## API
+* transform_image_to_thumbnails(file, params)
+* transform_image_to_thumbnail(file, key, opts \\ [])
+* transform_movie_to_thumbnails(file, params)
+* transform_movie_to_thumbnail(file, key, opts \\ [])
+* transform_movie_to_animated_gif(file, key, opts \\ [])
+* transform_movie_to_resizes(file, params)
+* transform_movie_to_sprites(file, opts \\ [])
+
+See code for examples and options.
