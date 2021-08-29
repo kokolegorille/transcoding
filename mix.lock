@@ -1,3 +1,4 @@
 %{
   "ex_image_info": {:hex, :ex_image_info, "0.2.4", "610002acba43520a9b1cf1421d55812bde5b8a8aeaf1fe7b1f8823e84e762adb", [:mix], [], "hexpm", "fd1a7e02664e3b14dfd3b231d22fdd48bd3dd694c4773e6272b3a6228f1106bc"},
+  "mime": {:hex, :mime, "2.0.1", "0de4c81303fe07806ebc2494d5321ce8fb4df106e34dd5f9d787b637ebadc256", [:mix], [], "hexpm", "7a86b920d2aedce5fb6280ac8261ac1a739ae6c1a1ad38f5eadf910063008942"},
 }

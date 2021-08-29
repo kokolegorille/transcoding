@@ -21,6 +21,13 @@ be found at [https://hexdocs.pm/transcoding](https://hexdocs.pm/transcoding).
 
 # Transcoding
 
-id
-path
-type (eg medium thumbnail)
+A simple module to achieve assets transformation.
+
+Inspired by waffle and jwplayer-thumbnail-preview-generator (for sprites generation)
+
+It persists work in subfolder of the original file, except for sprites, directly in it.
+
+References: 
+
+* [Waffle](https://hexdocs.pm/waffle)
+* [JWPlayer thumbnail preview generator](https://github.com/amnuts/jwplayer-thumbnail-preview-generator)
