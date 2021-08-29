@@ -364,7 +364,8 @@ defmodule Transcoding do
     %{
       "filename" => name,
       "path" => dest,
-      "content_type" => MIME.type(extension)
+      "content_type" => MIME.type(extension),
+      "size" => File.lstat!(dest).size
     }
   end
 
