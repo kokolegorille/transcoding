@@ -28,6 +28,39 @@ defmodule Transcoding do
       ts = [mini: [resize: "160x90^"], thumb: [resize: "256x144^"], large: [resize: "640x360^"]]
       Transcoding.transform_image_to_thumbnails f, ts
 
+      [
+        ok: %{
+          "file" => %{
+            "content_type" => "image/png",
+            "filename" => "file_example_PNG_3MB.png",
+            "path" => "test/fixtures/mini/file_example_PNG_3MB.png",
+            "size" => 21177
+          },
+          "key" => :mini,
+          "type" => :image_to_thumbnail
+        },
+        ok: %{
+          "file" => %{
+            "content_type" => "image/png",
+            "filename" => "file_example_PNG_3MB.png",
+            "path" => "test/fixtures/thumb/file_example_PNG_3MB.png",
+            "size" => 46148
+          },
+          "key" => :thumb,
+          "type" => :image_to_thumbnail
+        },
+        ok: %{
+          "file" => %{
+            "content_type" => "image/png",
+            "filename" => "file_example_PNG_3MB.png",
+            "path" => "test/fixtures/large/file_example_PNG_3MB.png",
+            "size" => 237388
+          },
+          "key" => :large,
+          "type" => :image_to_thumbnail
+        }
+      ]
+
   """
   def transform_image_to_thumbnails(file, params),
     do: transform_many(:image_to_thumbnail, file, params)
@@ -38,6 +71,26 @@ defmodule Transcoding do
   ## Options
     * `:resize` - set the default size, default to "256x144^"
     * `:format` - set the thumbnail format, default to :png
+
+  ## Examples
+
+      f = "test/fixtures/file_example_PNG_3MB.png"
+      key = :mini
+      opts = [resize: "160x90^"]
+      Transcoding.transform_image_to_thumbnail f, key, opts
+
+      {:ok,
+        %{
+          "file" => %{
+            "content_type" => "image/png",
+            "filename" => "file_example_PNG_3MB.png",
+            "path" => "test/fixtures/mini/file_example_PNG_3MB.png",
+            "size" => 21177
+          },
+          "key" => :mini,
+          "type" => :image_to_thumbnail
+      }}
+
   """
   def transform_image_to_thumbnail(file, key, opts \\ []),
     do: transform(:image_to_thumbnail, file, key, opts)
@@ -51,6 +104,39 @@ defmodule Transcoding do
       ts = [mini: [scale: "160x90"], thumb: [scale: "256x144"], large: [scale: "640x360"]]
       Transcoding.transform_movie_to_thumbnails f, ts
 
+      [
+        ok: %{
+          "file" => %{
+            "content_type" => "image/png",
+            "filename" => "file_example_MP4_1920_18MG.png",
+            "path" => "test/fixtures/mini/file_example_MP4_1920_18MG.png",
+            "size" => 8996
+          },
+          "key" => :mini,
+          "type" => :movie_to_thumbnail
+        },
+        ok: %{
+          "file" => %{
+            "content_type" => "image/png",
+            "filename" => "file_example_MP4_1920_18MG.png",
+            "path" => "test/fixtures/thumb/file_example_MP4_1920_18MG.png",
+            "size" => 20812
+          },
+          "key" => :thumb,
+          "type" => :movie_to_thumbnail
+        },
+        ok: %{
+          "file" => %{
+            "content_type" => "image/png",
+            "filename" => "file_example_MP4_1920_18MG.png",
+            "path" => "test/fixtures/large/file_example_MP4_1920_18MG.png",
+            "size" => 111271
+          },
+          "key" => :large,
+          "type" => :movie_to_thumbnail
+        }
+      ]
+
   """
   def transform_movie_to_thumbnails(file, params),
     do: transform_many(:movie_to_thumbnail, file, params)
@@ -62,6 +148,26 @@ defmodule Transcoding do
     * `:format` - set the thumbnail format, default to :png
     * `:ss` - set the seek position
     * `:scale`- scale of image
+
+  ## Examples
+
+      f = "test/fixtures/file_example_MP4_1920_18MG.mp4"
+      key = :mini
+      opts = [scale: "160x90"]
+      Transcoding.transform_movie_to_thumbnail f, key, opts
+
+      {:ok,
+        %{
+          "file" => %{
+            "content_type" => "image/png",
+            "filename" => "file_example_MP4_1920_18MG.png",
+            "path" => "test/fixtures/mini/file_example_MP4_1920_18MG.png",
+            "size" => 8996
+          },
+          "key" => :mini,
+          "type" => :movie_to_thumbnail
+        }}
+
   """
   def transform_movie_to_thumbnail(file, key, opts \\ []),
     do: transform(:movie_to_thumbnail, file, key, opts)
@@ -80,6 +186,18 @@ defmodule Transcoding do
 
       f = "test/fixtures/file_example_MP4_1920_18MG.mp4"
       Transcoding.transform_movie_to_animated_gif f, :animated_gif, [scale: "256:144"]
+
+      {:ok,
+        %{
+          "file" => %{
+            "content_type" => "image/gif",
+            "filename" => "file_example_MP4_1920_18MG.gif",
+            "path" => "test/fixtures/animated_gif/file_example_MP4_1920_18MG.gif",
+            "size" => 210003
+          },
+          "key" => :animated_gif,
+          "type" => :movie_to_animated_gif
+        }}
 
   """
   def transform_movie_to_animated_gif(file, key, opts \\ []),
@@ -114,6 +232,8 @@ defmodule Transcoding do
       ]
       Transcoding.transform_movie_to_resizes f, ts
 
+      Similar result as previous, but too long to run...
+
   """
   def transform_movie_to_resizes(file, params),
     do: transform_many(:movie_to_resize, file, params)
@@ -125,6 +245,24 @@ defmodule Transcoding do
     * `:vcodec` - set codec to use, eg: "libx264", "libx265" (default)
     * `:crf` - set the quality, 0 lossless, 51: worst
     * `:scale`- scale of image
+
+  ## Examples
+      f = "test/fixtures/file_example_MP4_1920_18MG.mp4"
+      key = :resize_144
+      opts = [scale: "-1:144"]
+      Transcoding.transform_movie_to_resize f, key, opts
+
+      {:ok,
+        %{
+          "file" => %{
+            "content_type" => "video/mp4",
+            "filename" => "file_example_MP4_1920_18MG.mp4",
+            "path" => "test/fixtures/resize_144/file_example_MP4_1920_18MG.mp4",
+            "size" => 657195
+          },
+          "key" => :resize_144,
+          "type" => :movie_to_resize
+        }}
 
   """
   def transform_movie_to_resize(file, key, opts \\ []),
@@ -144,6 +282,24 @@ defmodule Transcoding do
 
       f = "test/fixtures/file_example_MP4_1920_18MG.mp4"
       Transcoding.transform_movie_to_sprites f
+
+      {:ok,
+        %{
+          "key" => :sprite,
+          "sprite_image" => %{
+            "content_type" => "image/jpeg",
+            "filename" => "sprite.jpg",
+            "path" => "test/fixtures/sprite.jpg",
+            "size" => 4766
+          },
+          "sprite_vtt" => %{
+            "content_type" => "application/octet-stream",
+            "filename" => "sprite.vtt",
+            "path" => "test/fixtures/sprite.vtt",
+            "size" => 250
+          },
+          "type" => :movie_to_sprite
+        }}
 
   """
   def transform_movie_to_sprites(file, opts \\ []),
@@ -330,33 +486,6 @@ defmodule Transcoding do
   end
 
   # Processor
-
-  # defp handle_transform(file, transformations) when is_list(transformations) do
-  #   tasks = for t <- transformations do
-  #     Task.async(fn -> handle_transform(file, t) end)
-  #   end
-
-  #   tasks_with_results = Task.yield_many(tasks, 6_000_000)
-
-  #   Enum.map(tasks_with_results, fn {task, res} ->
-  #     # Shut down the tasks that did not reply nor exit
-  #     res || Task.shutdown(task, :brutal_kill)
-  #   end)
-  # end
-
-  # defp handle_transform(file, transformations) when is_list(transformations) do
-  #   tasks = for t <- transformations do
-  #     Task.async(fn -> handle_transform(file, t) end)
-  #   end
-
-  #   tasks_with_results = Task.yield_many(tasks, :infinity)
-
-  #   # TODO : CHECK FOR ERROR CASE
-
-  #   Enum.map(tasks_with_results, fn {_task, {:ok, res}} ->
-  #     res
-  #   end)
-  # end
 
   # Sample Php code
   #
