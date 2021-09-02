@@ -24,3 +24,7 @@ transcoding-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Do not persists files from tests, except file_example*
+/test/fixtures/*
+!/test/fixtures/file_example*
