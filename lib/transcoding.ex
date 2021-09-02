@@ -283,23 +283,28 @@ defmodule Transcoding do
       f = "test/fixtures/file_example_MP4_1920_18MG.mp4"
       Transcoding.transform_movie_to_sprites f
 
-      {:ok,
-        %{
-          "key" => :sprite,
-          "sprite_image" => %{
+      [
+        ok: %{
+          "file" => %{
             "content_type" => "image/jpeg",
             "filename" => "sprite.jpg",
             "path" => "test/fixtures/sprite.jpg",
             "size" => 4766
           },
-          "sprite_vtt" => %{
+          "key" => "sprite_image",
+          "type" => :movie_to_sprite
+        },
+        ok: %{
+          "file" => %{
             "content_type" => "application/octet-stream",
             "filename" => "sprite.vtt",
             "path" => "test/fixtures/sprite.vtt",
             "size" => 250
           },
+          "key" => "sprite_vtt",
           "type" => :movie_to_sprite
-        }}
+        }
+      ]
 
   """
   def transform_movie_to_sprites(file, opts \\ []),
@@ -436,14 +441,18 @@ defmodule Transcoding do
     # Clean Up tmp directory
     File.rm_rf!(dest)
 
-    {:ok,
-      %{
+    [
+      {:ok, %{
         "type" => type,
-        "key" => key,
-        "sprite_image" => new_file(sprite_image_name, sprite_image),
-        "sprite_vtt" => new_file(sprite_vtt_name, sprite_vtt),
-      }
-    }
+        "key" => "#{key}_image",
+        "file" => new_file(sprite_image_name, sprite_image)
+      }},
+      {:ok, %{
+        "type" => type,
+        "key" => "#{key}_vtt",
+        "file" => new_file(sprite_vtt_name, sprite_vtt)
+      }}
+    ]
   end
 
   # Private
