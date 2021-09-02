@@ -44,3 +44,4 @@ be found at [https://hexdocs.pm/transcoding](https://hexdocs.pm/transcoding).
 * transform_movie_to_sprites(file, opts \\ [])
 
 See code for examples and options.
+

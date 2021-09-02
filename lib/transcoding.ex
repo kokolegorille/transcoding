@@ -29,12 +29,8 @@ defmodule Transcoding do
       Transcoding.transform_image_to_thumbnails f, ts
 
   """
-  def transform_image_to_thumbnails(file, params) do
-    transformations = Enum.map(params, fn {k, v} ->
-      build_transform(:image_to_thumbnail, k, v)
-    end)
-    handle_transform(file, transformations)
-  end
+  def transform_image_to_thumbnails(file, params),
+    do: transform_many(:image_to_thumbnail, file, params)
 
   @doc"""
   Transform an image to a thumbnail.
@@ -44,7 +40,7 @@ defmodule Transcoding do
     * `:format` - set the thumbnail format, default to :png
   """
   def transform_image_to_thumbnail(file, key, opts \\ []),
-    do: handle_transform(file, build_transform(:image_to_thumbnail, key, opts))
+    do: transform(:image_to_thumbnail, file, key, opts)
 
   @doc"""
   Transform a movie to multiples thumbnails.
@@ -56,12 +52,8 @@ defmodule Transcoding do
       Transcoding.transform_movie_to_thumbnails f, ts
 
   """
-  def transform_movie_to_thumbnails(file, params) do
-    transformations = Enum.map(params, fn {k, v} ->
-      build_transform(:movie_to_thumbnail, k, v)
-    end)
-    handle_transform(file, transformations)
-  end
+  def transform_movie_to_thumbnails(file, params),
+    do: transform_many(:movie_to_thumbnail, file, params)
 
   @doc"""
   Transform a movie to a thumbnail.
@@ -72,7 +64,7 @@ defmodule Transcoding do
     * `:scale`- scale of image
   """
   def transform_movie_to_thumbnail(file, key, opts \\ []),
-    do: handle_transform(file, build_transform(:movie_to_thumbnail, key, opts))
+    do: transform(:movie_to_thumbnail, file, key, opts)
 
   @doc"""
   Transform a movie to an animated gif.
@@ -91,7 +83,7 @@ defmodule Transcoding do
 
   """
   def transform_movie_to_animated_gif(file, key, opts \\ []),
-    do: handle_transform(file, build_transform(:movie_to_animated_gif, key, opts))
+    do: transform(:movie_to_animated_gif, file, key, opts)
 
   @doc"""
   Transform a movie to multiple resizes.
@@ -123,12 +115,8 @@ defmodule Transcoding do
       Transcoding.transform_movie_to_resizes f, ts
 
   """
-  def transform_movie_to_resizes(file, params) do
-    transformations = Enum.map(params, fn {k, v} ->
-      build_transform(:resize_movie, k, v)
-    end)
-    handle_transform(file, transformations)
-  end
+  def transform_movie_to_resizes(file, params),
+    do: transform_many(:movie_to_resize, file, params)
 
   @doc"""
   Transform a movie to a resize.
@@ -140,7 +128,7 @@ defmodule Transcoding do
 
   """
   def transform_movie_to_resize(file, key, opts \\ []),
-    do: handle_transform(file, build_transform(:resize_movie, key, opts))
+    do: transform(:movie_to_resize, file, key, opts)
 
   @doc"""
   Transform a movie to a sprites.
@@ -158,7 +146,39 @@ defmodule Transcoding do
       Transcoding.transform_movie_to_sprites f
 
   """
-  def transform_movie_to_sprites(file, opts \\ []) do
+  def transform_movie_to_sprites(file, opts \\ []),
+    do: transform(:movie_to_sprite, file, :sprite, opts)
+
+  # Generic
+
+  @doc false
+  def transform_many(type, file, params) do
+    tasks = for {key, opts} <- params do
+      Task.async(fn -> transform(type, file, key, opts) end)
+    end
+
+    tasks_with_results = Task.yield_many(tasks, :infinity)
+
+    Enum.map(tasks_with_results, fn {_task, {:ok, res}} -> res end)
+  end
+
+  @doc false
+  def transform(type, file, key, opts \\ [])
+
+  def transform(type, file, key, opts)
+  when type in ~w(image_to_thumbnail movie_to_thumbnail movie_to_animated_gif movie_to_resize)a do
+    case handle_transform(file, build_transform(type, key, opts)) do
+      {:ok, f} ->
+        {:ok, %{
+          "type" => type,
+          "key" => key,
+          "file" => f,
+        }}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  def transform(:movie_to_sprite = type, file, key, opts) do
     timespan = Keyword.get(opts, :timespan, 10)
     thumb_width = Keyword.get(opts, :thumb_width, 120)
     sprite_width = Keyword.get(opts, :sprite_width, 10)
@@ -262,8 +282,10 @@ defmodule Transcoding do
 
     {:ok,
       %{
-        sprite_image: new_file(sprite_image_name, sprite_image),
-        sprite_vtt: new_file(sprite_vtt_name, sprite_vtt),
+        "type" => type,
+        "key" => key,
+        "sprite_image" => new_file(sprite_image_name, sprite_image),
+        "sprite_vtt" => new_file(sprite_vtt_name, sprite_vtt),
       }
     }
   end
@@ -297,7 +319,7 @@ defmodule Transcoding do
   end
 
   # It's possible to add -preset veryslow
-  defp build_transform(:resize_movie, key, opts) do
+  defp build_transform(:movie_to_resize, key, opts) do
     vcodec = Keyword.get(opts, :vcodec, "libx265")
     crf = Keyword.get(opts, :crf, 10)
     scale = Keyword.get(opts, :scale, "-1:720")
@@ -322,17 +344,19 @@ defmodule Transcoding do
   #   end)
   # end
 
-  defp handle_transform(file, transformations) when is_list(transformations) do
-    tasks = for t <- transformations do
-      Task.async(fn -> handle_transform(file, t) end)
-    end
+  # defp handle_transform(file, transformations) when is_list(transformations) do
+  #   tasks = for t <- transformations do
+  #     Task.async(fn -> handle_transform(file, t) end)
+  #   end
 
-    tasks_with_results = Task.yield_many(tasks, :infinity)
+  #   tasks_with_results = Task.yield_many(tasks, :infinity)
 
-    Enum.map(tasks_with_results, fn {_task, res} ->
-      res
-    end)
-  end
+  #   # TODO : CHECK FOR ERROR CASE
+
+  #   Enum.map(tasks_with_results, fn {_task, {:ok, res}} ->
+  #     res
+  #   end)
+  # end
 
   # Sample Php code
   #
@@ -393,7 +417,9 @@ defmodule Transcoding do
     regex = ~r/\b(?<tbr>\d+(?:\.\d+)?) tbr\b/
     map = Regex.named_captures(regex, details)
 
-    tbr = String.to_integer(map["tbr"])
+    # Can be "3", or "3.3"!
+    {tbr, _} = Float.parse(map["tbr"])
+    # tbr = String.to_float(map["tbr"])
 
     %{duration: duration, start: start, tbr: tbr}
   end
