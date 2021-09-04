@@ -35,6 +35,8 @@ be found at [https://hexdocs.pm/transcoding](https://hexdocs.pm/transcoding).
 * [JWPlayer thumbnail preview generator](https://github.com/amnuts/jwplayer-thumbnail-preview-generator)
 
 ## API
+
+```
 * transform_image_to_thumbnails(file, params)
 * transform_image_to_thumbnail(file, key, opts \\ [])
 * transform_movie_to_thumbnails(file, params)
@@ -42,6 +44,8 @@ be found at [https://hexdocs.pm/transcoding](https://hexdocs.pm/transcoding).
 * transform_movie_to_animated_gif(file, key, opts \\ [])
 * transform_movie_to_resizes(file, params)
 * transform_movie_to_sprites(file, opts \\ [])
+* transform_movie_to_sprite_images(file, opts \\ [])
+```
 
 See code for examples and options.
 

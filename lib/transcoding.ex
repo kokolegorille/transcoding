@@ -310,6 +310,26 @@ defmodule Transcoding do
   def transform_movie_to_sprites(file, opts \\ []),
     do: transform(:movie_to_sprite, file, :sprite, opts)
 
+  @doc"""
+  Transform a movie to a sprite images.
+
+  Custom transformation
+  This will not delete tmp dir!
+
+  ## Options
+    * `:timespan` - time between each screenshots in seconds
+    * `:thumb_width` - max width of the thumbnail
+    * `:sprite_width`- number of thumbnails per row
+
+  ## Examples
+
+      f = "test/fixtures/file_example_MP4_1920_18MG.mp4"
+      Transcoding.transform_movie_to_sprite_images f
+
+  """
+  def transform_movie_to_sprite_images(file, opts \\ []),
+    do: transform(:movie_to_sprite_images, file, :sprite_images, opts)
+
   # Generic
 
   @doc false
@@ -339,6 +359,50 @@ defmodule Transcoding do
     end
   end
 
+  def transform(:movie_to_sprite_images = type, file, key, opts) do
+    timespan = Keyword.get(opts, :timespan, 10)
+    thumb_width = Keyword.get(opts, :thumb_width, 120)
+    # sprite_width = Keyword.get(opts, :sprite_width, 10)
+
+    name = Path.basename(file, Path.extname(file))
+
+    # This will be the output dir of the sprite files
+    file_dir = Path.dirname(file)
+
+    # Generate a random tmp directory
+    # which will be deleted after work
+    # dest = Path.join([file_dir, "_tmp_#{:rand.uniform(1_000_000)}"])
+
+    dest = Path.join([file_dir, to_string(key)])
+
+    unless File.exists?(dest), do: File.mkdir!(dest)
+
+    %{duration: _duration, start: start, tbr: tbr} = extract_file_info(file)
+
+    # Generate thumbnails, use a func that returns a list
+    fun = fn input, _output ->
+      [
+        "-y", "-i", input, "-ss", "#{start}", "-an", "-sn", "-vsync", "0", "-q:v", "5", "-threads", "1",
+        "-vf", "scale=#{thumb_width}:-1,select=not(mod(n\\, #{timespan * tbr}))", "#{dest}/#{name}-%05d.jpg"
+      ]
+    end
+
+    process file, dest, {:ffmpeg, fun}
+
+    # Read tmp_dir and list thumbnails
+    dest
+    |> Path.join("*.jpg")
+    |> Path.wildcard()
+    |> Enum.sort()
+    |> IO.inspect(label: FILES)
+    # Transform to a list of {:ok, file}
+    |> Enum.map(&{:ok, %{
+      "type" => type,
+      "key" => key,
+      "file" => new_file(Path.basename(&1), &1)},
+    })
+  end
+
   def transform(:movie_to_sprite = type, file, key, opts) do
     timespan = Keyword.get(opts, :timespan, 10)
     thumb_width = Keyword.get(opts, :thumb_width, 120)
@@ -361,7 +425,7 @@ defmodule Transcoding do
     fun = fn input, _output ->
       [
         "-y", "-i", input, "-ss", "#{start}", "-an", "-sn", "-vsync", "0", "-q:v", "5", "-threads", "1",
-        "-vf", "scale=#{thumb_width}:-1,select=not(mod(n\\, #{timespan * tbr}))", "#{dest}/#{name}-%04d.jpg"
+        "-vf", "scale=#{thumb_width}:-1,select=not(mod(n\\, #{timespan * tbr}))", "#{dest}/#{name}-%05d.jpg"
       ]
     end
 
