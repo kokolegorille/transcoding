@@ -274,7 +274,9 @@ defmodule Transcoding do
   Custom transformation
 
   ## Options
-    * `:timespan` - time between each screenshots in seconds
+    OBSOLETE * `:timespan` - time between each screenshots in seconds
+
+    * `:seconds` - time between each screenshots in seconds
     * `:thumb_width` - max width of the thumbnail
     * `:sprite_width`- number of thumbnails per row
 
@@ -311,24 +313,26 @@ defmodule Transcoding do
     do: transform(:movie_to_sprite, file, :sprite, opts)
 
   @doc"""
-  Transform a movie to a sprite images.
+  Transform a movie to a screenshot images.
 
   Custom transformation
   This will not delete tmp dir!
+  Used for AI analysis
 
   ## Options
-    * `:timespan` - time between each screenshots in seconds
+    OBSOLETE * `:timespan` - time between each screenshots in seconds
+
+    * `:seconds` - time between each screenshots in seconds
     * `:thumb_width` - max width of the thumbnail
-    * `:sprite_width`- number of thumbnails per row
 
   ## Examples
 
       f = "test/fixtures/file_example_MP4_1920_18MG.mp4"
-      Transcoding.transform_movie_to_sprite_images f
+      Transcoding.transform_movie_to_screenshots f
 
   """
-  def transform_movie_to_sprite_images(file, opts \\ []),
-    do: transform(:movie_to_sprite_images, file, :sprite_images, opts)
+  def transform_movie_to_screenshots(file, opts \\ []),
+    do: transform(:movie_to_screenshots, file, :screenshots, opts)
 
   # Generic
 
@@ -359,10 +363,9 @@ defmodule Transcoding do
     end
   end
 
-  def transform(:movie_to_sprite_images = type, file, key, opts) do
-    timespan = Keyword.get(opts, :timespan, 10)
+  def transform(:movie_to_screenshots = type, file, key, opts) do
+    seconds = Keyword.get(opts, :seconds, 10)
     thumb_width = Keyword.get(opts, :thumb_width, 120)
-    # sprite_width = Keyword.get(opts, :sprite_width, 10)
 
     name = Path.basename(file, Path.extname(file))
 
@@ -377,13 +380,16 @@ defmodule Transcoding do
 
     unless File.exists?(dest), do: File.mkdir!(dest)
 
-    %{duration: _duration, start: start, tbr: tbr} = extract_file_info(file)
+    %{duration: _duration, start: start, tbr: _tbr} = extract_file_info(file)
 
     # Generate thumbnails, use a func that returns a list
     fun = fn input, _output ->
       [
-        "-y", "-i", input, "-ss", "#{start}", "-an", "-sn", "-vsync", "0", "-q:v", "5", "-threads", "1",
-        "-vf", "scale=#{thumb_width}:-1,select=not(mod(n\\, #{timespan * tbr}))", "#{dest}/#{name}-%05d.jpg"
+        # ORIGINAL SCRIPT
+        # "-y", "-i", input, "-ss", "#{start}", "-an", "-sn", "-vsync", "0", "-q:v", "5", "-threads", "1",
+        # "-vf", "scale=#{thumb_width}:-1,select=not(mod(n\\, #{timespan * tbr}))", "#{dest}/#{name}-%05d.jpg"
+
+        "-y", "-i", input, "-ss", "#{start}", "-vf", "scale=#{thumb_width}:-1,fps=1/#{seconds}", "#{dest}/#{name}-%05d.jpg"
       ]
     end
 
@@ -404,7 +410,7 @@ defmodule Transcoding do
   end
 
   def transform(:movie_to_sprite = type, file, key, opts) do
-    timespan = Keyword.get(opts, :timespan, 10)
+    seconds = Keyword.get(opts, :seconds, 10)
     thumb_width = Keyword.get(opts, :thumb_width, 120)
     sprite_width = Keyword.get(opts, :sprite_width, 10)
 
@@ -419,13 +425,17 @@ defmodule Transcoding do
 
     unless File.exists?(dest), do: File.mkdir!(dest)
 
-    %{duration: _duration, start: start, tbr: tbr} = extract_file_info(file)
+    %{duration: _duration, start: start, tbr: _tbr} = extract_file_info(file)
 
     # Generate thumbnails, use a func that returns a list
     fun = fn input, _output ->
       [
-        "-y", "-i", input, "-ss", "#{start}", "-an", "-sn", "-vsync", "0", "-q:v", "5", "-threads", "1",
-        "-vf", "scale=#{thumb_width}:-1,select=not(mod(n\\, #{timespan * tbr}))", "#{dest}/#{name}-%05d.jpg"
+        # ORIGINAL SCRIPT
+        # "-y", "-i", input, "-ss", "#{start}", "-an", "-sn", "-vsync", "0", "-q:v", "5", "-threads", "1",
+        # "-vf", "scale=#{thumb_width}:-1,select=not(mod(n\\, #{timespan * tbr}))", "#{dest}/#{name}-%05d.jpg"
+
+        "-y", "-i", input, "-ss", "#{start}", "-vf", "scale=#{thumb_width}:-1,fps=1/#{seconds}", "#{dest}/#{name}-%05d.jpg"
+
       ]
     end
 
@@ -486,14 +496,14 @@ defmodule Transcoding do
 
     %{vtt: vtt} = Enum.reduce(0..(total - 1), initial_acc, fn f, acc ->
       t1 = time_to_string(acc.s)
-      s = acc.s + timespan
+      s = acc.s + seconds
       t2 = time_to_string(s)
 
       {rx, ry} = if f > 0 && rem(f, thumb_across) == 0,
         do: {0, acc.ry + 1 },
         else: {(acc.rx), acc.ry}
 
-      vtt = acc.vtt <> "#{t1} ---> #{t2}\n#{sprite_image_name}#xywh=#{rx * w},#{ry * h},#{w},#{h}" <> "\n\n"
+      vtt = acc.vtt <> "#{t1} --> #{t2}\n#{sprite_image_name}#xywh=#{rx * w},#{ry * h},#{w},#{h}" <> "\n\n"
 
       %{acc | s: s, rx: rx + 1, vtt: vtt}
     end)
