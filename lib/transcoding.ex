@@ -96,6 +96,32 @@ defmodule Transcoding do
     do: transform(:image_to_thumbnail, file, key, opts)
 
   @doc"""
+  Filter image.
+
+  Custom transformation
+  Used for AI analysis
+
+  ## Options
+
+    filter is mandatory!
+
+    * `:filter` - The filter
+
+  ## Examples
+
+      f = "test/fixtures/file_example_PNG_3MB.png"
+      Transcoding.filter_image f, "crop=10:10:10:10"
+
+      # If You want to set a destination dir, and/or filename
+      Transcoding.filter_image f, "crop=10:10:10:10", dest_dir: "/tmp", filename: "koko.png"
+
+  """
+  def filter_image(file, filter, opts \\ []) do
+    key = Keyword.get(opts, :key, "filter")
+    transform(:filter_image, file, key, [{:filter, filter} | opts])
+  end
+
+  @doc"""
   Transform a movie to multiples thumbnails.
 
   ## Examples
@@ -351,8 +377,13 @@ defmodule Transcoding do
   def transform(type, file, key, opts \\ [])
 
   def transform(type, file, key, opts)
-  when type in ~w(image_to_thumbnail movie_to_thumbnail movie_to_animated_gif movie_to_resize)a do
-    case handle_transform(file, build_transform(type, key, opts)) do
+  when type in ~w(
+    image_to_thumbnail movie_to_thumbnail movie_to_animated_gif
+    movie_to_resize filter_image
+  )a do
+    # opts can be used to build transformation, and to handle it.
+    # To set dest_dir or filename manually.
+    case handle_transform(file, build_transform(type, key, opts), opts) do
       {:ok, f} ->
         {:ok, %{
           "type" => type,
@@ -400,7 +431,7 @@ defmodule Transcoding do
     |> Path.join("*.jpg")
     |> Path.wildcard()
     |> Enum.sort()
-    |> IO.inspect(label: FILES)
+    # |> IO.inspect(label: FILES)
     # Transform to a list of {:ok, file}
     |> Enum.map(&{:ok, %{
       "type" => type,
@@ -532,6 +563,14 @@ defmodule Transcoding do
   # Private
 
   # Helpers to build transformation from type, key and options
+  defp build_transform(:filter_image, key, opts) do
+    filter = Keyword.fetch!(opts, :filter)
+    format = Keyword.get(opts, :format, :png)
+    {key, {:ffmpeg, fn input, output ->
+      ["-y", "-i",  input,  "-vf", "#{filter}", "-f", "image2", output]
+    end}, format}
+  end
+
   defp build_transform(:image_to_thumbnail, key, opts) do
     resize = Keyword.get(opts, :resize, "256x144^")
     format = Keyword.get(opts, :format, :png)
@@ -576,17 +615,25 @@ defmodule Transcoding do
   #   $start + .0001, $params['input'], $params['thumbWidth'],
   #   $params['timespan'] * $tbr, $params['output'], $name
   # ));
-  defp handle_transform(file, {key, transform, extension}) do
-    Logger.info "Processing #{key} w/ #{extension} #{inspect transform}"
+  defp handle_transform(file, {key, transform, extension}, opts) do
+    # Logger.info "Processing #{key} w/ #{extension} #{inspect transform}"
 
     dir = Path.dirname(file)
     filename = Path.basename(file, Path.extname(file))
-    new_filename = "#{filename}.#{extension}"
+
+    # Calculate destination
     key = to_string(key)
-    new_dir = Path.join([dir, key])
+
+    new_filename = Keyword.get(opts, :filename, "#{filename}.#{extension}")
+    new_dir = Keyword.get(opts, :dest_dir, Path.join([dir, key]))
+
+    # new_filename = "#{filename}.#{extension}"
+    # new_dir = Path.join([dir, key])
 
     unless File.exists?(new_dir), do: File.mkdir!(new_dir)
 
+    # Output filename
+    # TODO : enable setting dest!
     dest = Path.join([new_dir, new_filename])
 
     case process(file, dest, transform) do
