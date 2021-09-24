@@ -122,6 +122,23 @@ defmodule Transcoding do
   end
 
   @doc"""
+  Transform a movie to audio.
+  This is used for speech to text
+
+  ## Options
+
+    * `:acodec` - The audio codec, default to "pcm_s16le"
+
+  ## Examples
+
+      f = "test/fixtures/file_example_MP4_1920_18MG.mp4"
+      Transcoding.transform_movie_to_audio f
+
+  """
+  def transform_movie_to_audio(file, opts \\ []),
+    do: transform(:movie_to_audio, file, :audio, opts)
+
+  @doc"""
   Transform a movie to multiples thumbnails.
 
   ## Examples
@@ -379,7 +396,7 @@ defmodule Transcoding do
   def transform(type, file, key, opts)
   when type in ~w(
     image_to_thumbnail movie_to_thumbnail movie_to_animated_gif
-    movie_to_resize filter_image
+    movie_to_resize filter_image movie_to_audio
   )a do
     # opts can be used to build transformation, and to handle it.
     # To set dest_dir or filename manually.
@@ -568,6 +585,15 @@ defmodule Transcoding do
     format = Keyword.get(opts, :format, :png)
     {key, {:ffmpeg, fn input, output ->
       ["-y", "-i",  input,  "-vf", "#{filter}", "-f", "image2", output]
+    end}, format}
+  end
+
+  defp build_transform(:movie_to_audio, key, opts) do
+    acodec = Keyword.get(opts, :acodec, "pcm_s16le")
+    format = Keyword.get(opts, :format, :wav)
+
+    {key, {:ffmpeg, fn input, output ->
+      ["-y", "-i",  input,  "-acodec", "#{acodec}", "-ac", "1", "-ar", "16000", output]
     end}, format}
   end
 
