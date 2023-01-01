@@ -127,7 +127,8 @@ defmodule Transcoding do
 
   ## Options
 
-    * `:acodec` - The audio codec, default to "pcm_s16le"
+    # NO ACODEC OPTION FIR AUTOSUB TRANSFORM
+    # * `:acodec` - The audio codec, default to "pcm_s16le"
 
   ## Examples
 
@@ -588,12 +589,22 @@ defmodule Transcoding do
     end}, format}
   end
 
+  # Deepspeech movie to audio
+  # defp build_transform(:movie_to_audio, key, opts) do
+  #   acodec = Keyword.get(opts, :acodec, "pcm_s16le")
+  #   format = Keyword.get(opts, :format, :wav)
+
+  #   {key, {:ffmpeg, fn input, output ->
+  #     ["-y", "-i",  input,  "-acodec", "#{acodec}", "-ac", "1", "-ar", "16000", output]
+  #   end}, format}
+  # end
+
+  # Autosub movie to audio
   defp build_transform(:movie_to_audio, key, opts) do
-    acodec = Keyword.get(opts, :acodec, "pcm_s16le")
     format = Keyword.get(opts, :format, :wav)
 
     {key, {:ffmpeg, fn input, output ->
-      ["-y", "-i",  input,  "-acodec", "#{acodec}", "-ac", "1", "-ar", "16000", output]
+      ["-y", "-i",  input,  "-b:a", "192k", "-ac", "1", "-ar", "16000", "-vn", output]
     end}, format}
   end
 
